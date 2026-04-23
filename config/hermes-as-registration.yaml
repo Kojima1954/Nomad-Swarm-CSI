@@ -1,0 +1,13 @@
+id: "nomad-hermes-orchestrator"
+url: "http://orchestrator:4000"
+as_token: "${MATRIX_AS_TOKEN}"
+hs_token: "${MATRIX_HS_TOKEN}"
+sender_localpart: "hermes-orchestrator"
+namespaces:
+  users:
+    - exclusive: true
+      regex: "@hermes-orchestrator:.*"
+  aliases: []
+  rooms: []
+rate_limited: false
+protocols: []

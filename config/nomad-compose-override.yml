@@ -1,0 +1,21 @@
+services:
+  nomad_command_center:
+    networks:
+      - nomad-hermes-net
+    ports:
+      - "8081:8080"   # Element Web occupies 8080; NOMAD CC remapped here
+
+  nomad_ollama:
+    networks:
+      - nomad-hermes-net
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+
+  nomad_qdrant:
+    networks:
+      - nomad-hermes-net
+
+networks:
+  nomad-hermes-net:
+    external: true
+    name: nomad-hermes-net

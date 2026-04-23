@@ -1,0 +1,143 @@
+version: "3.9"
+
+include:
+  - path: upstream/project-nomad/docker-compose.yml
+    env_file: .env
+
+services:
+  # ─── Synapse PostgreSQL ────────────────────────────────────────────────────
+  synapse-postgres:
+    image: postgres:16-alpine
+    container_name: synapse-postgres
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    environment:
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=${SYNAPSE_DB_PASSWORD}
+      - POSTGRES_DB=synapse
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - synapse_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Matrix Homeserver ────────────────────────────────────────────────────
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: synapse
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    volumes:
+      - ./upstream/synapse-data:/data
+      - ./config/homeserver.yaml:/data/homeserver.yaml:ro
+    environment:
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+    ports:
+      - "8008:8008"
+    depends_on:
+      synapse-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/_matrix/client/versions"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ─── Element Web Client ───────────────────────────────────────────────────
+  element-web:
+    image: vectorim/element-web:latest
+    container_name: element-web
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    volumes:
+      - ./config/element-config.json:/app/config.json:ro
+    ports:
+      - "8080:80"
+
+  # ─── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nomad-hermes-redis
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # ─── Hermes Agent ─────────────────────────────────────────────────────────
+  hermes-agent:
+    build:
+      context: ./upstream/hermes-agent
+      dockerfile: Dockerfile
+    container_name: hermes-agent
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    volumes:
+      - hermes_data:/root/.hermes
+      - ./config/hermes-config.yaml:/root/.hermes/config.yaml:ro
+    environment:
+      - HERMES_API_SERVER_ENABLED=true
+      - HERMES_API_SERVER_PORT=8642
+      - HERMES_API_KEY=${HERMES_API_KEY}
+      - HERMES_BASE_URL=http://nomad_ollama:11434/v1
+      - HERMES_MODEL=llama3.1:8b
+      - HERMES_MATRIX_ACCESS_TOKEN=${HERMES_MATRIX_ACCESS_TOKEN}
+      - HERMES_MATRIX_ROOM_ID=${HERMES_MATRIX_ROOM_ID}
+      - HERMES_MATRIX_HOMESERVER=http://synapse:8008
+    ports:
+      - "8642:8642"
+    depends_on:
+      - synapse
+      - nomad_ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8642/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ─── Orchestrator (Matrix Application Service) ────────────────────────────
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: nomad-hermes-orchestrator
+    restart: unless-stopped
+    networks: [nomad-hermes-net]
+    environment:
+      - PORT=4000
+      - MATRIX_HOMESERVER_URL=http://synapse:8008
+      - MATRIX_SERVER_NAME=localhost
+      - MATRIX_AS_TOKEN=${MATRIX_AS_TOKEN}
+      - MATRIX_HS_TOKEN=${MATRIX_HS_TOKEN}
+      - MATRIX_BOT_LOCALPART=hermes-orchestrator
+      - HERMES_API_URL=http://hermes-agent:8642/v1/chat/completions
+      - HERMES_API_KEY=${HERMES_API_KEY}
+      - DATABASE_URL=postgresql://synapse:${SYNAPSE_DB_PASSWORD}@synapse-postgres:5432/nomad_hermes
+      - REDIS_URL=redis://redis:6379
+      - AI_TRIGGER_PREFIX=!hermes
+      - AI_RATE_LIMIT_PER_MINUTE=10
+      - TRANSCRIPT_CONTEXT_WINDOW=20
+    ports:
+      - "4000:4000"
+    depends_on:
+      - synapse
+      - hermes-agent
+      - redis
+      - synapse-postgres
+
+volumes:
+  synapse_db_data:
+  hermes_data:
+  redis_data:
+  nomad_data:
+  nomad_ollama_data:
+  nomad_qdrant_data:
+  synapse_media_data:
+
+networks:
+  nomad-hermes-net:
+    driver: bridge
+    name: nomad-hermes-net

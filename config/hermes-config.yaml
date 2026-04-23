@@ -1,0 +1,47 @@
+provider: custom
+base_url: http://nomad_ollama:11434/v1
+model: llama3.1:8b
+api_key: "none"
+
+api_server:
+  enabled: true
+  port: 8642
+  key: ${HERMES_API_KEY}
+  cors_origins:
+    - "http://orchestrator:4000"
+
+session:
+  shared_mode: true
+  shared_session_id: "nomad-hermes-room-main"
+
+memory:
+  provider: holographic
+  db_path: /root/.hermes/memory.db
+
+auxiliary:
+  base_url: http://nomad_ollama:11434/v1
+  model: llama3.1:8b
+  api_key: "none"
+
+gateway:
+  matrix:
+    enabled: true
+    homeserver_url: http://synapse:8008
+    access_token: ${HERMES_MATRIX_ACCESS_TOKEN}
+    room_id: ${HERMES_MATRIX_ROOM_ID}
+    # Triggers are DISABLED — all !hermes routing is handled by the AS (orchestrator)
+    # This prevents double-fire. See Critical Constraint #3 in INTEGRATION.md.
+    trigger_prefix: "__DISABLED__"
+    trigger_mention: false
+    shared_session: true
+    session_id: "nomad-hermes-room-main"
+    bot_display_name: "Hermes | NOMAD-AI"
+    bot_avatar: null
+
+terminal:
+  backend: local
+  allowed_commands:
+    - read
+    - search
+    - summarize
+    - list

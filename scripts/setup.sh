@@ -9,19 +9,13 @@ echo ""
 
 cd "${REPO_ROOT}"
 
-# ─── [1/12] Clone upstream repos ────────────────────────────────────────────
-echo "[1/12] Cloning upstream repositories..."
-if [ ! -d "upstream/project-nomad/.git" ]; then
-  git clone https://github.com/Crosstalk-Solutions/project-nomad.git upstream/project-nomad
-else
-  echo "  → upstream/project-nomad already cloned"
+# ─── [1/12] Verify vendored upstream sources ────────────────────────────────
+echo "[1/12] Verifying vendored upstream sources..."
+if [ ! -d "upstream/project-nomad" ] || [ ! -d "upstream/hermes-agent" ]; then
+  echo "ERROR: upstream sources missing — expected upstream/project-nomad and upstream/hermes-agent in-tree"
+  exit 1
 fi
-
-if [ ! -d "upstream/hermes-agent/.git" ]; then
-  git clone https://github.com/NousResearch/hermes-agent.git upstream/hermes-agent
-else
-  echo "  → upstream/hermes-agent already cloned"
-fi
+echo "  → upstream/project-nomad and upstream/hermes-agent present"
 
 # ─── [2/12] Generate secrets ─────────────────────────────────────────────────
 echo "[2/12] Generating secrets and .env file..."

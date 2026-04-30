@@ -69,11 +69,27 @@ bash scripts/healthcheck.sh
 
 See [docs/USAGE.md](docs/USAGE.md) for the full command reference.
 
+## Vendored Upstream Sources
+
+Project N.O.M.A.D. and Hermes Agent are vendored directly into this repository
+via `git subtree`, with full upstream history preserved:
+
+| Path | Upstream | Subtree-merged from |
+|---|---|---|
+| `upstream/project-nomad/` | https://github.com/Crosstalk-Solutions/project-nomad | `main` |
+| `upstream/hermes-agent/` | https://github.com/NousResearch/hermes-agent | `main` |
+
+A fresh clone of this repo contains everything needed — `setup.sh` no longer
+performs any external clones.
+
 ## Updating
 
 ```bash
 bash scripts/update.sh
 ```
+
+`update.sh` runs `git subtree pull` against both upstreams to merge in any new
+commits while preserving the integrated history.
 
 ## Offline Operation
 

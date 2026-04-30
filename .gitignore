@@ -8,12 +8,16 @@ yarn-error.log*
 # Environment — never commit real credentials
 .env
 
-# Upstream repos (cloned by setup.sh)
-upstream/
+# Vendored upstream sources are tracked in-tree (see README "Vendored Upstream Sources").
+# Only runtime-generated artifacts inside upstream/ are ignored.
 
-# Generated Synapse data
+# Generated Synapse data and Element config
 upstream/synapse-data/
 upstream/element-config/
+
+# Generated config files written by scripts/setup.sh step 4
+upstream/hermes-agent/config.yaml
+upstream/project-nomad/docker-compose.override.yml
 
 # Docker
 .docker/

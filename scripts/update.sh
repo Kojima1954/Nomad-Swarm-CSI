@@ -14,9 +14,11 @@ docker compose pull synapse element-web redis synapse-postgres
 echo "[2/4] Rebuilding orchestrator..."
 docker compose build --no-cache orchestrator
 
-echo "[3/4] Updating upstream repos..."
-git -C upstream/project-nomad pull --ff-only || echo "  WARNING: project-nomad update failed"
-git -C upstream/hermes-agent pull --ff-only || echo "  WARNING: hermes-agent update failed"
+echo "[3/4] Updating vendored upstream sources via git subtree..."
+git subtree pull --prefix=upstream/project-nomad https://github.com/Crosstalk-Solutions/project-nomad.git main \
+  || echo "  WARNING: project-nomad subtree pull failed"
+git subtree pull --prefix=upstream/hermes-agent https://github.com/NousResearch/hermes-agent.git main \
+  || echo "  WARNING: hermes-agent subtree pull failed"
 
 echo "[4/4] Restarting services..."
 docker compose up -d --remove-orphans
